@@ -1,19 +1,21 @@
+--!strict -- Enable strict type checking for better code quality (requires Luau)
+
 --- Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 --- Player and GUI setup
-local player = Players.LocalPlayer
-local PlayerGui = player:WaitForChild("PlayerGui")
+local player = Players.LocalPlayer :: Player -- Type annotation for strict mode
+local PlayerGui = player:WaitForChild("PlayerGui") :: PlayerGui
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "AscendControlGUI"
-gui.Parent = PlayerGui -- Parent directly to PlayerGui
-gui.DisplayOrder = 10
-gui.ResetOnSpawn = false -- Ensure GUI persists across respawns
+gui.Parent = PlayerGui
+gui.DisplayOrder = 10 -- Ensure it's on top of most other GUIs
+gui.ResetOnSpawn = false -- Crucial for persistent UI across respawns
 
 -- Helper function to create TextButtons
-local function createButton(parent, name, text, size, position, bgColor, textColor)
+local function createButton(parent: GuiObject, name: string, text: string, size: UDim2, position: UDim2, bgColor: Color3, textColor: Color3): TextButton
     local btn = Instance.new("TextButton")
     btn.Name = name
     btn.Text = text
@@ -31,8 +33,8 @@ end
 local toggleButton = createButton(
     gui,
     "ToggleButton",
-    "Toggle Ascend UI",
-    UDim2.new(0.1, 0, 0.05, 0),
+    "Hide Ascend UI", -- Default text assuming the frame is visible initially
+    UDim2.new(0.12, 0, 0.05, 0), -- Slightly larger for visibility
     UDim2.new(0.05, 0, 0.05, 0),
     Color3.fromRGB(85, 85, 85),
     Color3.fromRGB(255, 255, 255)
@@ -41,19 +43,19 @@ local toggleButton = createButton(
 -- Main Ascend/UnAscend Frame
 local frame = Instance.new("Frame")
 frame.Name = "AscendFrame"
-frame.Size = UDim2.new(0.2, 0, 0.25, 0) -- Increased height for textbox
-frame.Position = UDim2.new(0.5, 0, 0.8, 0) -- Fixed position (e.g., bottom-center)
+frame.Size = UDim2.new(0.2, 0, 0.28, 0) -- Increased height slightly
+frame.Position = UDim2.new(0.5, 0, 0.8, 0) -- Fixed position (bottom-center)
 frame.AnchorPoint = Vector2.new(0.5, 0.5)
 frame.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
 frame.BorderSizePixel = 0
-frame.Visible = true
-frame.Parent = gui -- Parent to gui
+frame.Visible = true -- Frame is visible by default
+frame.Parent = gui
 
 -- Ascend Speed Text Box (Label + Input)
 local speedLabel = Instance.new("TextLabel", frame)
 speedLabel.Name = "SpeedLabel"
 speedLabel.Text = "Ascend Speed:"
-speedLabel.Size = UDim2.new(0.9, 0, 0.2, 0)
+speedLabel.Size = UDim2.new(0.9, 0, 0.18, 0) -- Adjusted size
 speedLabel.Position = UDim2.new(0.05, 0, 0.05, 0)
 speedLabel.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
 speedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -63,7 +65,7 @@ speedLabel.TextXAlignment = Enum.TextXAlignment.Left
 
 local speedTextBox = Instance.new("TextBox", frame)
 speedTextBox.Name = "SpeedTextBox"
-speedTextBox.Size = UDim2.new(0.9, 0, 0.2, 0)
+speedTextBox.Size = UDim2.new(0.9, 0, 0.18, 0) -- Adjusted size
 speedTextBox.Position = UDim2.new(0.05, 0, 0.25, 0) -- Below the label
 speedTextBox.PlaceholderText = "Enter speed (e.g., 30)"
 speedTextBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
@@ -79,7 +81,7 @@ local ascendButton = createButton(
     "AscendButton",
     "Ascend",
     UDim2.new(0.4, 0, 0.3, 0),
-    UDim2.new(0.1, 0, 0.5, 0),
+    UDim2.new(0.05, 0, 0.55, 0), -- Slightly adjusted position
     Color3.fromRGB(70, 130, 180),
     Color3.fromRGB(255, 255, 255)
 )
@@ -89,7 +91,7 @@ local unAscendButton = createButton(
     "UnAscendButton",
     "UnAscend",
     UDim2.new(0.4, 0, 0.3, 0),
-    UDim2.new(0.5, 0, 0.5, 0),
+    UDim2.new(0.55, 0, 0.55, 0), -- Slightly adjusted position
     Color3.fromRGB(200, 80, 80),
     Color3.fromRGB(255, 255, 255)
 )
@@ -97,10 +99,46 @@ local unAscendButton = createButton(
 --- Ascent/Descent variables
 local isAscending = false
 local ascendSpeed = 30 -- Default speed
-local originalHumanoidCFrame = nil -- To store initial CFrame for resetting on descend
+local originalHumanoidCFrame: CFrame? = nil -- To store initial CFrame for resetting on descend
 
 -- Set initial text box value
 speedTextBox.Text = tostring(ascendSpeed)
+
+--- Function to get current character components safely
+local function getCharacterParts(): (Character?, Humanoid?, Part?)
+    local character = player.Character
+    if not character or not character:IsA("Model") then
+        return nil, nil, nil
+    end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+
+    return character, humanoid, humanoidRootPart
+end
+
+--- Function to reset character state
+local function resetCharacterState()
+    print("Resetting character state...")
+    isAscending = false
+    local character, humanoid, humanoidRootPart = getCharacterParts()
+
+    if humanoid then
+        humanoid.PlatformStand = false -- Re-enable default animations
+    end
+    if humanoidRootPart then
+        -- Stop vertical movement, maintain horizontal
+        humanoidRootPart.AssemblyLinearVelocity = Vector3.new(
+            humanoidRootPart.AssemblyLinearVelocity.X,
+            0,
+            humanoidRootPart.AssemblyLinearVelocity.Z
+        )
+        if originalHumanoidCFrame then
+            -- Only reset orientation if it was stored (meaning we ascended)
+            humanoidRootPart.CFrame = originalHumanoidCFrame
+            originalHumanoidCFrame = nil -- Clear after use
+        end
+    end
+end
 
 --- Event for speed text box
 speedTextBox.FocusLost:Connect(function(enterPressed)
@@ -110,28 +148,9 @@ speedTextBox.FocusLost:Connect(function(enterPressed)
         print("Ascend speed set to: " .. ascendSpeed)
     else
         warn("Invalid speed entered. Must be a positive number. Resetting to default.")
-        speedTextBox.Text = tostring(ascendSpeed)
+        speedTextBox.Text = tostring(ascendSpeed) -- Revert to current valid speed
     end
 end)
-
---- Function to reset character state
-local function resetCharacterState()
-    isAscending = false
-    local character = player.Character
-    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    local humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
-
-    if humanoid then
-        humanoid.PlatformStand = false -- Re-enable default animations
-    end
-    if humanoidRootPart then
-        humanoidRootPart.AssemblyLinearVelocity = Vector3.new(humanoidRootPart.AssemblyLinearVelocity.X, 0, humanoidRootPart.AssemblyLinearVelocity.Z)
-        if originalHumanoidCFrame then
-            humanoidRootPart.CFrame = originalHumanoidCFrame -- Reset orientation
-            originalHumanoidCFrame = nil
-        end
-    end
-end
 
 --- Toggle functionality
 toggleButton.MouseButton1Click:Connect(function()
@@ -140,31 +159,39 @@ toggleButton.MouseButton1Click:Connect(function()
     if not frame.Visible then
         resetCharacterState() -- Reset when UI is hidden
     end
+    print("UI visibility toggled to:", frame.Visible)
 end)
 
 --- Ascend/UnAscend functionality
 ascendButton.MouseButton1Click:Connect(function()
+    print("Ascend button clicked!")
     isAscending = true
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    local humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
+    local character, humanoid, humanoidRootPart = getCharacterParts()
 
     if humanoid and humanoidRootPart then
         originalHumanoidCFrame = humanoidRootPart.CFrame -- Store current CFrame before modifying
         humanoid.PlatformStand = true -- Disable default animations
+        print("Ascending initiated. PlatformStand:", humanoid.PlatformStand)
+    else
+        warn("Could not find Humanoid or HumanoidRootPart for ascending.")
     end
 end)
 
 unAscendButton.MouseButton1Click:Connect(function()
+    print("UnAscend button clicked!")
     resetCharacterState() -- Reset when "UnAscend" is clicked
+end)
+
+-- Handle character respawn: ensure character state is reset
+player.CharacterAdded:Connect(function(character)
+    print("Character added. Resetting state.")
+    resetCharacterState()
 end)
 
 -- Continuously update player's velocity and orientation if ascending
 RunService.Stepped:Connect(function()
     if isAscending then
-        local character = player.Character or player.CharacterAdded:Wait()
-        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-        local humanoidRootPart = character and character:FindFirstChild("HumanoidRootPart")
+        local character, humanoid, humanoidRootPart = getCharacterParts()
 
         if humanoid and humanoidRootPart and humanoid.PlatformStand then
             -- Set vertical velocity, maintaining horizontal velocity
@@ -182,6 +209,13 @@ RunService.Stepped:Connect(function()
             local currentYawCFrame = CFrame.new(currentPos) * CFrame.Angles(0, currentYaw, 0)
 
             humanoidRootPart.CFrame = currentYawCFrame * CFrame.Angles(math.rad(-90), 0, 0)
+        else
+            -- If for some reason PlatformStand is false while isAscending is true,
+            -- or parts are missing, automatically reset state.
+            if isAscending then -- Only print if we were trying to ascend
+                warn("Ascend condition failed (Humanoid/HRP missing or PlatformStand false). Resetting.")
+                resetCharacterState()
+            end
         end
     end
 end)
