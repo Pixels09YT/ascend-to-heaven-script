@@ -1,167 +1,72 @@
---- Services
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
+--[[
+	WARNING: Heads up! This script has not been verified by ScriptBlox. Use at your own risk!
+]]
+--// Create GUI Elements
+local ScreenGui = Instance.new("ScreenGui")
+local FloatButton = Instance.new("TextButton")
+local DragFrame = Instance.new("Frame")
 
---- Player and GUI setup
-local player = Players.LocalPlayer
-local PlayerGui = player:WaitForChild("PlayerGui")
+--// Set GUI Properties
+ScreenGui.Name = "FloatGui"
+ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
-local gui = Instance.new("ScreenGui")
-gui.Name = "AscendControlGUI"
-gui.Parent = PlayerGui
-gui.DisplayOrder = 10 -- Ensure it's on top of other GUIs
+DragFrame.Name = "DragFrame"
+DragFrame.Parent = ScreenGui
+DragFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+DragFrame.BorderSizePixel = 0
+DragFrame.Size = UDim2.new(0, 200, 0, 80)
+DragFrame.Position = UDim2.new(0.4, 0, 0.4, 0)
+DragFrame.Active = true
+DragFrame.Draggable = true
 
--- Toggle Button
-local toggleButton = Instance.new("TextButton")
-toggleButton.Name = "ToggleButton"
-toggleButton.Size = UDim2.new(0.1, 0, 0.05, 0) -- Scaled size for mobile
-toggleButton.Position = UDim2.new(0.05, 0, 0.05, 0) -- Scaled position
-toggleButton.Text = "Toggle Ascend UI"
-toggleButton.BackgroundColor3 = Color3.fromRGB(85, 85, 85)
-toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleButton.Font = Enum.Font.SourceSansBold
-toggleButton.TextScaled = true -- Text scales with button size
-toggleButton.Parent = gui
+FloatButton.Name = "FloatButton"
+FloatButton.Parent = DragFrame
+FloatButton.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
+FloatButton.Size = UDim2.new(1, 0, 0.5, 0)
+FloatButton.Position = UDim2.new(0, 0, 0, 0)
+FloatButton.Font = Enum.Font.SourceSans
+FloatButton.Text = "Float: OFF"
+FloatButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+FloatButton.TextSize = 20
 
--- Main Ascend/UnAscend Frame
-local frame = Instance.new("Frame")
-frame.Name = "AscendFrame"
-frame.Size = UDim2.new(0.2, 0, 0.15, 0) -- Scaled size
-frame.Position = UDim2.new(0.5, -frame.Size.X.Offset / 2, 0.8, -frame.Size.Y.Offset / 2) -- Centered initially (scaled)
-frame.AnchorPoint = Vector2.new(0.5, 0.5) -- For proper centering
-frame.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-frame.BorderSizePixel = 0
-frame.Visible = true -- Starts visible, can be toggled
-frame.Parent = gui
+--// Variables
+local isFloating = false
+local player = game.Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local floatForce
+local rotateConnection
 
-local ascendButton = Instance.new("TextButton")
-ascendButton.Name = "AscendButton"
-ascendButton.Text = "Ascend"
-ascendButton.Size = UDim2.new(0.4, 0, 0.8, 0) -- Scaled within the frame
-ascendButton.Position = UDim2.new(0.1, 0, 0.1, 0) -- Scaled within the frame
-ascendButton.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
-ascendButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ascendButton.Font = Enum.Font.SourceSansBold
-ascendButton.TextScaled = true
-ascendButton.Parent = frame
+--// Toggle Float Function
+local function toggleFloat()
+    isFloating = not isFloating
+    FloatButton.Text = isFloating and "Float: ON" or "Float: OFF"
 
-local unAscendButton = Instance.new("TextButton")
-unAscendButton.Name = "UnAscendButton"
-unAscendButton.Text = "UnAscend"
-unAscendButton.Size = UDim2.new(0.4, 0, 0.8, 0) -- Scaled within the frame
-unAscendButton.Position = UDim2.new(0.5, 0, 0.1, 0) -- Scaled within the frame
-unAscendButton.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
-unAscendButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-unAscendButton.Font = Enum.Font.SourceSansBold
-unAscendButton.TextScaled = true
-unAscendButton.Parent = frame
+    if isFloating then
+        -- Create a BodyVelocity to make the player ascend
+        floatForce = Instance.new("BodyVelocity")
+        floatForce.MaxForce = Vector3.new(0, math.huge, 0)
+        floatForce.Velocity = Vector3.new(0, 5, 0) -- Ascend speed
+        floatForce.Parent = humanoidRootPart
 
--- Add a UIListLayout to organize buttons better within the frame
-local buttonLayout = Instance.new("UIListLayout")
-buttonLayout.FillDirection = Enum.FillDirection.Horizontal
-buttonLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-buttonLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-buttonLayout.Padding = UDim.new(0.05, 0) -- 5% padding between buttons
-buttonLayout.Parent = frame
-
---- Draggable functionality variables
-local dragging = false
-local dragStart
-local startPosition
-local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-
---- Velocity variables
-local ascendVelocityValue = Vector3.new(0, 25, 0)
-local currentLinearVelocity
-
---- Toggle functionality
-toggleButton.MouseButton1Click:Connect(function()
-    frame.Visible = not frame.Visible
-    if frame.Visible then
-        toggleButton.Text = "Hide Ascend UI"
+        -- Rotate the character while ascending
+        rotateConnection = game:GetService("RunService").RenderStepped:Connect(function()
+            humanoidRootPart.CFrame = humanoidRootPart.CFrame * CFrame.Angles(0, math.rad(2), 0)
+        end)
     else
-        toggleButton.Text = "Show Ascend UI"
-        -- If hiding, also stop any ascent
-        if currentLinearVelocity then
-            if currentLinearVelocity.Attachment0 then
-                currentLinearVelocity.Attachment0:Destroy()
-            end
-            currentLinearVelocity:Destroy()
-            currentLinearVelocity = nil
+        -- Stop floating by removing the BodyVelocity
+        if floatForce then
+            floatForce:Destroy()
+            floatForce = nil
         end
-    end
-end)
 
---- Draggable functionality
-local function onInputBegan(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        -- Check if the input is on the frame itself, not a button within it
-        if input.Target == frame then
-            dragging = true
-            dragStart = input.Position
-            startPosition = frame.Position
-            UserInputService.InputChanged:Connect(onInputChanged)
-            UserInputService.InputEnded:Connect(onInputEnded)
+        -- Stop rotating
+        if rotateConnection then
+            rotateConnection:Disconnect()
+            rotateConnection = nil
         end
     end
 end
 
-local function onInputChanged(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        frame.Position = UDim2.new(
-            startPosition.X.Scale, startPosition.X.Offset + delta.X,
-            startPosition.Y.Scale, startPosition.Y.Offset + delta.Y
-        )
-    end
-end
-
-local function onInputEnded(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-        dragging = false
-        -- Disconnect the input changed/ended connections to prevent unnecessary updates
-        UserInputService.InputChanged:Disconnect(onInputChanged)
-        UserInputService.InputEnded:Disconnect(onInputEnded)
-    end
-end
-
-frame.InputBegan:Connect(onInputBegan)
-
-
---- Ascend/UnAscend functionality
-ascendButton.MouseButton1Click:Connect(function()
-    local character = player.Character or player.CharacterAdded:Wait()
-    if character then
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-
-        if humanoid and humanoidRootPart then
-            -- Destroy any existing LinearVelocity to prevent multiple
-            if currentLinearVelocity then
-                currentLinearVelocity:Destroy()
-                currentLinearVelocity = nil
-            end
-
-            local attachment = Instance.new("Attachment")
-            attachment.Parent = humanoidRootPart
-
-            currentLinearVelocity = Instance.new("LinearVelocity")
-            currentLinearVelocity.Attachment0 = attachment
-            currentLinearVelocity.VectorVelocity = ascendVelocityValue
-            currentLinearVelocity.MaxForce = Vector3.new(0, math.huge, 0) -- Unlimited vertical force
-            currentLinearVelocity.Parent = humanoidRootPart
-        end
-    end
-end)
-
-unAscendButton.MouseButton1Click:Connect(function()
-    if currentLinearVelocity then
-        if currentLinearVelocity.Attachment0 then
-            currentLinearVelocity.Attachment0:Destroy() -- Destroy the attachment too
-        end
-        currentLinearVelocity:Destroy()
-        currentLinearVelocity = nil
-    end
-end)
-
+--// Connect Buttons
+FloatButton.MouseButton1Click:Connect(toggleFloat)
