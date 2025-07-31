@@ -44,7 +44,7 @@ local function toggleFloat()
         -- Create a BodyVelocity to make the player ascend
         floatForce = Instance.new("BodyVelocity")
         floatForce.MaxForce = Vector3.new(0, math.huge, 0)
-        floatForce.Velocity = Vector3.new(0, 5, 0) -- Ascend speed
+        floatForce.Velocity = Vector3.new(0, 30, 0) -- Ascend speed
         floatForce.Parent = humanoidRootPart
 
         -- Rotate the character while ascending
