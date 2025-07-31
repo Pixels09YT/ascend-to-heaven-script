@@ -1,70 +1,184 @@
+--!strict
+wait(5) -- Add this line at the very top of the FULL script.
 
---// Create GUI Elements
+--- Services
+local Players = game:GetService("Players")
+-- --!strict
+
+--- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+--- Player and Character References
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local HumanoidRootPart: Part = Character:WaitForChild("HumanoidRootPart") :: Part
+
+--- GUI Elements
 local ScreenGui = Instance.new("ScreenGui")
-local FloatButton = Instance.new("TextButton")
 local DragFrame = Instance.new("Frame")
+local FloatToggleButton = Instance.new("TextButton")
+local FloatSpeedSlider = Instance.new("Slider") -- Not a real Roblox UI element, but conceptual
+local RotateSpeedSlider = Instance.new("Slider") -- Not a real Roblox UI element, but conceptual
+local FloatSpeedLabel = Instance.new("TextLabel")
+local RotateSpeedLabel = Instance.new("TextLabel")
 
---// Set GUI Properties
-ScreenGui.Name = "FloatGui"
-ScreenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+--- Configuration Variables
+local IS_FLOATING: boolean = false
+local CURRENT_FLOAT_SPEED: number = 30 -- Default ascend speed
+local CURRENT_ROTATION_SPEED: number = 10 -- Default rotation speed in degrees per frame
 
-DragFrame.Name = "DragFrame"
-DragFrame.Parent = ScreenGui
-DragFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-DragFrame.BorderSizePixel = 0
-DragFrame.Size = UDim2.new(0, 200, 0, 80)
-DragFrame.Position = UDim2.new(0.4, 0, 0.4, 0)
-DragFrame.Active = true
-DragFrame.Draggable = true
+--- Runtime Variables
+local FloatBodyVelocity: BodyVelocity? = nil
+local RotateConnection: RBXScriptConnection? = nil
 
-FloatButton.Name = "FloatButton"
-FloatButton.Parent = DragFrame
-FloatButton.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
-FloatButton.Size = UDim2.new(1, 0, 0.5, 0)
-FloatButton.Position = UDim2.new(0, 0, 0, 0)
-FloatButton.Font = Enum.Font.SourceSans
-FloatButton.Text = "Float: OFF"
-FloatButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-FloatButton.TextSize = 20
+--- GUI Setup
+do
+    ScreenGui.Name = "FloatControlGui"
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
---// Variables
-local isFloating = false
-local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-local floatForce
-local rotateConnection
+    DragFrame.Name = "ControlPanel"
+    DragFrame.Parent = ScreenGui
+    DragFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    DragFrame.BorderSizePixel = 0
+    DragFrame.Size = UDim2.new(0, 200, 0, 180) -- Increased size to accommodate new controls
+    DragFrame.Position = UDim2.new(0.4, 0, 0.4, 0)
+    DragFrame.Active = true
+    DragFrame.Draggable = true
 
---// Toggle Float Function
-local function toggleFloat()
-    isFloating = not isFloating
-    FloatButton.Text = isFloating and "Float: ON" or "Float: OFF"
+    -- Toggle Button
+    FloatToggleButton.Name = "FloatToggleButton"
+    FloatToggleButton.Parent = DragFrame
+    FloatToggleButton.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
+    FloatToggleButton.Size = UDim2.new(1, 0, 0.25, 0) -- Adjusted size
+    FloatToggleButton.Position = UDim2.new(0, 0, 0, 0)
+    FloatToggleButton.Font = Enum.Font.SourceSans
+    FloatToggleButton.Text = "Float: OFF"
+    FloatToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    FloatToggleButton.TextSize = 20
 
-    if isFloating then
-        -- Create a BodyVelocity to make the player ascend
-        floatForce = Instance.new("BodyVelocity")
-        floatForce.MaxForce = Vector3.new(0, math.huge, 0)
-        floatForce.Velocity = Vector3.new(0, 30, 0) -- Ascend speed
-        floatForce.Parent = humanoidRootPart
+    -- Float Speed Label
+    FloatSpeedLabel.Name = "FloatSpeedLabel"
+    FloatSpeedLabel.Parent = DragFrame
+    FloatSpeedLabel.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    FloatSpeedLabel.BackgroundTransparency = 0.5
+    FloatSpeedLabel.Size = UDim2.new(1, 0, 0.2, 0)
+    FloatSpeedLabel.Position = UDim2.new(0, 0, 0.25, 0)
+    FloatSpeedLabel.Font = Enum.Font.SourceSans
+    FloatSpeedLabel.Text = "Float Speed: " .. CURRENT_FLOAT_SPEED
+    FloatSpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    FloatSpeedLabel.TextSize = 16
 
-        -- Rotate the character while ascending
-        rotateConnection = game:GetService("RunService").RenderStepped:Connect(function()
-            humanoidRootPart.CFrame = humanoidRootPart.CFrame * CFrame.Angles(0, math.rad(10), 0)
-        end)
-    else
-        -- Stop floating by removing the BodyVelocity
-        if floatForce then
-            floatForce:Destroy()
-            floatForce = nil
-        end
+    -- This is a placeholder for a slider. Roblox doesn't have a built-in Slider UI element
+    -- You would typically create a custom slider using a Frame and a Draggable part.
+    -- For now, I'll just add a placeholder label for conceptual understanding.
+    local FloatSpeedPlaceholder = Instance.new("TextLabel")
+    FloatSpeedPlaceholder.Name = "FloatSpeedSliderPlaceholder"
+    FloatSpeedPlaceholder.Parent = DragFrame
+    FloatSpeedPlaceholder.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+    FloatSpeedPlaceholder.Size = UDim2.new(1, 0, 0.1, 0)
+    FloatSpeedPlaceholder.Position = UDim2.new(0, 0, 0.45, 0)
+    FloatSpeedPlaceholder.Font = Enum.Font.SourceSans
+    FloatSpeedPlaceholder.Text = " (Custom Slider Here) "
+    FloatSpeedPlaceholder.TextColor3 = Color3.fromRGB(200, 200, 200)
+    FloatSpeedPlaceholder.TextSize = 12
 
-        -- Stop rotating
-        if rotateConnection then
-            rotateConnection:Disconnect()
-            rotateConnection = nil
-        end
+    -- Rotate Speed Label
+    RotateSpeedLabel.Name = "RotateSpeedLabel"
+    RotateSpeedLabel.Parent = DragFrame
+    RotateSpeedLabel.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    RotateSpeedLabel.BackgroundTransparency = 0.5
+    RotateSpeedLabel.Size = UDim2.new(1, 0, 0.2, 0)
+    RotateSpeedLabel.Position = UDim2.new(0, 0, 0.55, 0)
+    RotateSpeedLabel.Font = Enum.Font.SourceSans
+    RotateSpeedLabel.Text = "Rotate Speed: " .. CURRENT_ROTATION_SPEED
+    RotateSpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    RotateSpeedLabel.TextSize = 16
+
+    -- Placeholder for Rotate Speed Slider
+    local RotateSpeedPlaceholder = Instance.new("TextLabel")
+    RotateSpeedPlaceholder.Name = "RotateSpeedSliderPlaceholder"
+    RotateSpeedPlaceholder.Parent = DragFrame
+    RotateSpeedPlaceholder.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+    RotateSpeedPlaceholder.Size = UDim2.new(1, 0, 0.1, 0)
+    RotateSpeedPlaceholder.Position = UDim2.new(0, 0, 0.75, 0)
+    RotateSpeedPlaceholder.Font = Enum.Font.SourceSans
+    RotateSpeedPlaceholder.Text = " (Custom Slider Here) "
+    RotateSpeedPlaceholder.TextColor3 = Color3.fromRGB(200, 200, 200)
+    RotateSpeedPlaceholder.TextSize = 12
+end
+
+--- Functions
+local function StartFloating()
+    -- Create and set up BodyVelocity for floating
+    FloatBodyVelocity = Instance.new("BodyVelocity")
+    FloatBodyVelocity.MaxForce = Vector3.new(0, math.huge, 0) -- Allow infinite upward force
+    FloatBodyVelocity.Velocity = Vector3.new(0, CURRENT_FLOAT_SPEED, 0)
+    FloatBodyVelocity.Parent = HumanoidRootPart
+
+    -- Connect RenderStepped for continuous rotation
+    RotateConnection = RunService.RenderStepped:Connect(function()
+        HumanoidRootPart.CFrame = HumanoidRootPart.CFrame * CFrame.Angles(0, math.rad(CURRENT_ROTATION_SPEED), 0)
+    end)
+end
+
+local function StopFloating()
+    -- Clean up BodyVelocity
+    if FloatBodyVelocity then
+        FloatBodyVelocity:Destroy()
+        FloatBodyVelocity = nil
+    end
+
+    -- Disconnect rotation
+    if RotateConnection then
+        RotateConnection:Disconnect()
+        RotateConnection = nil
     end
 end
 
---// Connect Buttons
-FloatButton.MouseButton1Click:Connect(toggleFloat)
+local function ToggleFloat()
+    IS_FLOATING = not IS_FLOATING
+    FloatToggleButton.Text = IS_FLOATING and "Float: ON" or "Float: OFF"
+
+    if IS_FLOATING then
+        StartFloating()
+    else
+        StopFloating()
+    end
+end
+
+-- Function to update float speed (would be called by a custom slider's event)
+local function UpdateFloatSpeed(newSpeed: number)
+    CURRENT_FLOAT_SPEED = math.clamp(newSpeed, 10, 100) -- Example clamp for reasonable speeds
+    FloatSpeedLabel.Text = "Float Speed: " .. math.floor(CURRENT_FLOAT_SPEED)
+    if IS_FLOATING and FloatBodyVelocity then
+        FloatBodyVelocity.Velocity = Vector3.new(0, CURRENT_FLOAT_SPEED, 0)
+    end
+end
+
+-- Function to update rotation speed (would be called by a custom slider's event)
+local function UpdateRotationSpeed(newSpeed: number)
+    CURRENT_ROTATION_SPEED = math.clamp(newSpeed, 1, 30) -- Example clamp for reasonable speeds
+    RotateSpeedLabel.Text = "Rotate Speed: " .. math.floor(CURRENT_ROTATION_SPEED)
+    -- Rotation is handled by the RenderStepped connection, which uses CURRENT_ROTATION_SPEED directly.
+    -- No direct update needed here unless the connection is re-established.
+end
+
+--- Connections
+FloatToggleButton.MouseButton1Click:Connect(ToggleFloat)
+
+-- Example of how you would connect a custom slider's value changed event:
+-- YourCustomFloatSlider.ValueChanged:Connect(UpdateFloatSpeed)
+-- YourCustomRotateSlider.ValueChanged:Connect(UpdateRotationSpeed)
+
+--- Initial Setup
+-- Ensure the character exists and HumanoidRootPart is ready
+if not HumanoidRootPart then
+    LocalPlayer.CharacterAdded:Wait()
+    Character = LocalPlayer.Character or error("Character did not load!")
+    HumanoidRootPart = Character:WaitForChild("HumanoidRootPart") :: Part
+end
+
+-- You might want to initially set the speeds on the GUI if they can be changed elsewhere
+UpdateFloatSpeed(CURRENT_FLOAT_SPEED) -- To ensure label is correct at start
+UpdateRotationSpeed(CURRENT_ROTATION_SPEED) -- To ensure label is correct at start
