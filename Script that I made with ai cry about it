@@ -49,7 +49,7 @@ local function toggleFloat()
 
         -- Rotate the character while ascending
         rotateConnection = game:GetService("RunService").RenderStepped:Connect(function()
-            humanoidRootPart.CFrame = humanoidRootPart.CFrame * CFrame.Angles(0, math.rad(2), 0)
+            humanoidRootPart.CFrame = humanoidRootPart.CFrame * CFrame.Angles(0, math.rad(10), 0)
         end)
     else
         -- Stop floating by removing the BodyVelocity
