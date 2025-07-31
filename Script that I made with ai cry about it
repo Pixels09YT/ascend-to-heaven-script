@@ -1,221 +1,166 @@
---!strict -- Enable strict type checking for better code quality (requires Luau)
-
 --- Services
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
 --- Player and GUI setup
-local player = Players.LocalPlayer :: Player -- Type annotation for strict mode
-local PlayerGui = player:WaitForChild("PlayerGui") :: PlayerGui
+local player = Players.LocalPlayer
+local PlayerGui = player:WaitForChild("PlayerGui")
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "AscendControlGUI"
 gui.Parent = PlayerGui
-gui.DisplayOrder = 10 -- Ensure it's on top of most other GUIs
-gui.ResetOnSpawn = false -- Crucial for persistent UI across respawns
-
--- Helper function to create TextButtons
-local function createButton(parent: GuiObject, name: string, text: string, size: UDim2, position: UDim2, bgColor: Color3, textColor: Color3): TextButton
-    local btn = Instance.new("TextButton")
-    btn.Name = name
-    btn.Text = text
-    btn.Size = size
-    btn.Position = position
-    btn.BackgroundColor3 = bgColor
-    btn.TextColor3 = textColor
-    btn.Font = Enum.Font.SourceSansBold
-    btn.TextScaled = true
-    btn.Parent = parent
-    return btn
-end
+gui.DisplayOrder = 10 -- Ensure it's on top of other GUIs
 
 -- Toggle Button
-local toggleButton = createButton(
-    gui,
-    "ToggleButton",
-    "Hide Ascend UI", -- Default text assuming the frame is visible initially
-    UDim2.new(0.12, 0, 0.05, 0), -- Slightly larger for visibility
-    UDim2.new(0.05, 0, 0.05, 0),
-    Color3.fromRGB(85, 85, 85),
-    Color3.fromRGB(255, 255, 255)
-)
+local toggleButton = Instance.new("TextButton")
+toggleButton.Name = "ToggleButton"
+toggleButton.Size = UDim2.new(0.1, 0, 0.05, 0) -- Scaled size for mobile
+toggleButton.Position = UDim2.new(0.05, 0, 0.05, 0) -- Scaled position
+toggleButton.Text = "Toggle Ascend UI"
+toggleButton.BackgroundColor3 = Color3.fromRGB(85, 85, 85)
+toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleButton.Font = Enum.Font.SourceSansBold
+toggleButton.TextScaled = true -- Text scales with button size
+toggleButton.Parent = gui
 
 -- Main Ascend/UnAscend Frame
 local frame = Instance.new("Frame")
 frame.Name = "AscendFrame"
-frame.Size = UDim2.new(0.2, 0, 0.28, 0) -- Increased height slightly
-frame.Position = UDim2.new(0.5, 0, 0.8, 0) -- Fixed position (bottom-center)
-frame.AnchorPoint = Vector2.new(0.5, 0.5)
+frame.Size = UDim2.new(0.2, 0, 0.15, 0) -- Scaled size
+frame.Position = UDim2.new(0.5, -frame.Size.X.Offset / 2, 0.8, -frame.Size.Y.Offset / 2) -- Centered initially (scaled)
+frame.AnchorPoint = Vector2.new(0.5, 0.5) -- For proper centering
 frame.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
 frame.BorderSizePixel = 0
-frame.Visible = true -- Frame is visible by default
+frame.Visible = true -- Starts visible, can be toggled
 frame.Parent = gui
 
--- Ascend Speed Text Box (Label + Input)
-local speedLabel = Instance.new("TextLabel", frame)
-speedLabel.Name = "SpeedLabel"
-speedLabel.Text = "Ascend Speed:"
-speedLabel.Size = UDim2.new(0.9, 0, 0.18, 0) -- Adjusted size
-speedLabel.Position = UDim2.new(0.05, 0, 0.05, 0)
-speedLabel.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-speedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-speedLabel.Font = Enum.Font.SourceSansBold
-speedLabel.TextScaled = true
-speedLabel.TextXAlignment = Enum.TextXAlignment.Left
+local ascendButton = Instance.new("TextButton")
+ascendButton.Name = "AscendButton"
+ascendButton.Text = "Ascend"
+ascendButton.Size = UDim2.new(0.4, 0, 0.8, 0) -- Scaled within the frame
+ascendButton.Position = UDim2.new(0.1, 0, 0.1, 0) -- Scaled within the frame
+ascendButton.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+ascendButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ascendButton.Font = Enum.Font.SourceSansBold
+ascendButton.TextScaled = true
+ascendButton.Parent = frame
 
-local speedTextBox = Instance.new("TextBox", frame)
-speedTextBox.Name = "SpeedTextBox"
-speedTextBox.Size = UDim2.new(0.9, 0, 0.18, 0) -- Adjusted size
-speedTextBox.Position = UDim2.new(0.05, 0, 0.25, 0) -- Below the label
-speedTextBox.PlaceholderText = "Enter speed (e.g., 30)"
-speedTextBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-speedTextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-speedTextBox.TextScaled = true
-speedTextBox.Font = Enum.Font.SourceSans
-speedTextBox.ClearTextOnFocus = true
-speedTextBox.KeyboardMode = Enum.KeyboardMode.Numeric
+local unAscendButton = Instance.new("TextButton")
+unAscendButton.Name = "UnAscendButton"
+unAscendButton.Text = "UnAscend"
+unAscendButton.Size = UDim2.new(0.4, 0, 0.8, 0) -- Scaled within the frame
+unAscendButton.Position = UDim2.new(0.5, 0, 0.1, 0) -- Scaled within the frame
+unAscendButton.BackgroundColor3 = Color3.fromRGB(200, 80, 80)
+unAscendButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+unAscendButton.Font = Enum.Font.SourceSansBold
+unAscendButton.TextScaled = true
+unAscendButton.Parent = frame
 
--- Ascend/UnAscend Buttons
-local ascendButton = createButton(
-    frame,
-    "AscendButton",
-    "Ascend",
-    UDim2.new(0.4, 0, 0.3, 0),
-    UDim2.new(0.05, 0, 0.55, 0), -- Slightly adjusted position
-    Color3.fromRGB(70, 130, 180),
-    Color3.fromRGB(255, 255, 255)
-)
+-- Add a UIListLayout to organize buttons better within the frame
+local buttonLayout = Instance.new("UIListLayout")
+buttonLayout.FillDirection = Enum.FillDirection.Horizontal
+buttonLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+buttonLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+buttonLayout.Padding = UDim.new(0.05, 0) -- 5% padding between buttons
+buttonLayout.Parent = frame
 
-local unAscendButton = createButton(
-    frame,
-    "UnAscendButton",
-    "UnAscend",
-    UDim2.new(0.4, 0, 0.3, 0),
-    UDim2.new(0.55, 0, 0.55, 0), -- Slightly adjusted position
-    Color3.fromRGB(200, 80, 80),
-    Color3.fromRGB(255, 255, 255)
-)
+--- Draggable functionality variables
+local dragging = false
+local dragStart
+local startPosition
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 
---- Ascent/Descent variables
-local isAscending = false
-local ascendSpeed = 30 -- Default speed
-local originalHumanoidCFrame: CFrame? = nil -- To store initial CFrame for resetting on descend
-
--- Set initial text box value
-speedTextBox.Text = tostring(ascendSpeed)
-
---- Function to get current character components safely
-local function getCharacterParts(): (Character?, Humanoid?, Part?)
-    local character = player.Character
-    if not character or not character:IsA("Model") then
-        return nil, nil, nil
-    end
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-
-    return character, humanoid, humanoidRootPart
-end
-
---- Function to reset character state
-local function resetCharacterState()
-    print("Resetting character state...")
-    isAscending = false
-    local character, humanoid, humanoidRootPart = getCharacterParts()
-
-    if humanoid then
-        humanoid.PlatformStand = false -- Re-enable default animations
-    end
-    if humanoidRootPart then
-        -- Stop vertical movement, maintain horizontal
-        humanoidRootPart.AssemblyLinearVelocity = Vector3.new(
-            humanoidRootPart.AssemblyLinearVelocity.X,
-            0,
-            humanoidRootPart.AssemblyLinearVelocity.Z
-        )
-        if originalHumanoidCFrame then
-            -- Only reset orientation if it was stored (meaning we ascended)
-            humanoidRootPart.CFrame = originalHumanoidCFrame
-            originalHumanoidCFrame = nil -- Clear after use
-        end
-    end
-end
-
---- Event for speed text box
-speedTextBox.FocusLost:Connect(function(enterPressed)
-    local newSpeed = tonumber(speedTextBox.Text)
-    if newSpeed and newSpeed > 0 then
-        ascendSpeed = newSpeed
-        print("Ascend speed set to: " .. ascendSpeed)
-    else
-        warn("Invalid speed entered. Must be a positive number. Resetting to default.")
-        speedTextBox.Text = tostring(ascendSpeed) -- Revert to current valid speed
-    end
-end)
+--- Velocity variables
+local ascendVelocityValue = Vector3.new(0, 25, 0)
+local currentLinearVelocity
 
 --- Toggle functionality
 toggleButton.MouseButton1Click:Connect(function()
     frame.Visible = not frame.Visible
-    toggleButton.Text = frame.Visible and "Hide Ascend UI" or "Show Ascend UI"
-    if not frame.Visible then
-        resetCharacterState() -- Reset when UI is hidden
+    if frame.Visible then
+        toggleButton.Text = "Hide Ascend UI"
+    else
+        toggleButton.Text = "Show Ascend UI"
+        -- If hiding, also stop any ascent
+        if currentLinearVelocity then
+            if currentLinearVelocity.Attachment0 then
+                currentLinearVelocity.Attachment0:Destroy()
+            end
+            currentLinearVelocity:Destroy()
+            currentLinearVelocity = nil
+        end
     end
-    print("UI visibility toggled to:", frame.Visible)
 end)
+
+--- Draggable functionality
+local function onInputBegan(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        -- Check if the input is on the frame itself, not a button within it
+        if input.Target == frame then
+            dragging = true
+            dragStart = input.Position
+            startPosition = frame.Position
+            UserInputService.InputChanged:Connect(onInputChanged)
+            UserInputService.InputEnded:Connect(onInputEnded)
+        end
+    end
+end
+
+local function onInputChanged(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(
+            startPosition.X.Scale, startPosition.X.Offset + delta.X,
+            startPosition.Y.Scale, startPosition.Y.Offset + delta.Y
+        )
+    end
+end
+
+local function onInputEnded(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+        dragging = false
+        -- Disconnect the input changed/ended connections to prevent unnecessary updates
+        UserInputService.InputChanged:Disconnect(onInputChanged)
+        UserInputService.InputEnded:Disconnect(onInputEnded)
+    end
+end
+
+frame.InputBegan:Connect(onInputBegan)
+
 
 --- Ascend/UnAscend functionality
 ascendButton.MouseButton1Click:Connect(function()
-    print("Ascend button clicked!")
-    isAscending = true
-    local character, humanoid, humanoidRootPart = getCharacterParts()
+    local character = player.Character or player.CharacterAdded:Wait()
+    if character then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
 
-    if humanoid and humanoidRootPart then
-        originalHumanoidCFrame = humanoidRootPart.CFrame -- Store current CFrame before modifying
-        humanoid.PlatformStand = true -- Disable default animations
-        print("Ascending initiated. PlatformStand:", humanoid.PlatformStand)
-    else
-        warn("Could not find Humanoid or HumanoidRootPart for ascending.")
+        if humanoid and humanoidRootPart then
+            -- Destroy any existing LinearVelocity to prevent multiple
+            if currentLinearVelocity then
+                currentLinearVelocity:Destroy()
+                currentLinearVelocity = nil
+            end
+
+            local attachment = Instance.new("Attachment")
+            attachment.Parent = humanoidRootPart
+
+            currentLinearVelocity = Instance.new("LinearVelocity")
+            currentLinearVelocity.Attachment0 = attachment
+            currentLinearVelocity.VectorVelocity = ascendVelocityValue
+            currentLinearVelocity.MaxForce = Vector3.new(0, math.huge, 0) -- Unlimited vertical force
+            currentLinearVelocity.Parent = humanoidRootPart
+        end
     end
 end)
 
 unAscendButton.MouseButton1Click:Connect(function()
-    print("UnAscend button clicked!")
-    resetCharacterState() -- Reset when "UnAscend" is clicked
-end)
-
--- Handle character respawn: ensure character state is reset
-player.CharacterAdded:Connect(function(character)
-    print("Character added. Resetting state.")
-    resetCharacterState()
-end)
-
--- Continuously update player's velocity and orientation if ascending
-RunService.Stepped:Connect(function()
-    if isAscending then
-        local character, humanoid, humanoidRootPart = getCharacterParts()
-
-        if humanoid and humanoidRootPart and humanoid.PlatformStand then
-            -- Set vertical velocity, maintaining horizontal velocity
-            humanoidRootPart.AssemblyLinearVelocity = Vector3.new(
-                humanoidRootPart.AssemblyLinearVelocity.X,
-                ascendSpeed,
-                humanoidRootPart.AssemblyLinearVelocity.Z
-            )
-
-            -- Make character face up: Rotate around its current horizontal right vector to tilt them backwards.
-            -- This preserves their current yaw (left/right facing).
-            local currentPos = humanoidRootPart.Position
-            -- Get only the Y (yaw) rotation from the current CFrame
-            local _, currentYaw, _ = humanoidRootPart.CFrame:ToOrientation()
-            local currentYawCFrame = CFrame.new(currentPos) * CFrame.Angles(0, currentYaw, 0)
-
-            humanoidRootPart.CFrame = currentYawCFrame * CFrame.Angles(math.rad(-90), 0, 0)
-        else
-            -- If for some reason PlatformStand is false while isAscending is true,
-            -- or parts are missing, automatically reset state.
-            if isAscending then -- Only print if we were trying to ascend
-                warn("Ascend condition failed (Humanoid/HRP missing or PlatformStand false). Resetting.")
-                resetCharacterState()
-            end
+    if currentLinearVelocity then
+        if currentLinearVelocity.Attachment0 then
+            currentLinearVelocity.Attachment0:Destroy() -- Destroy the attachment too
         end
+        currentLinearVelocity:Destroy()
+        currentLinearVelocity = nil
     end
 end)
