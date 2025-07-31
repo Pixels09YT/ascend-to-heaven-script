@@ -6,9 +6,11 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local PlayerGui = player:WaitForChild("PlayerGui")
 
-local gui = Instance.new("ScreenGui", PlayerGui)
+local gui = Instance.new("ScreenGui")
 gui.Name = "AscendControlGUI"
+gui.Parent = PlayerGui -- Parent directly to PlayerGui
 gui.DisplayOrder = 10
+gui.ResetOnSpawn = false -- Ensure GUI persists across respawns
 
 -- Helper function to create TextButtons
 local function createButton(parent, name, text, size, position, bgColor, textColor)
@@ -37,7 +39,7 @@ local toggleButton = createButton(
 )
 
 -- Main Ascend/UnAscend Frame
-local frame = Instance.new("Frame", gui)
+local frame = Instance.new("Frame")
 frame.Name = "AscendFrame"
 frame.Size = UDim2.new(0.2, 0, 0.25, 0) -- Increased height for textbox
 frame.Position = UDim2.new(0.5, 0, 0.8, 0) -- Fixed position (e.g., bottom-center)
@@ -45,6 +47,7 @@ frame.AnchorPoint = Vector2.new(0.5, 0.5)
 frame.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
 frame.BorderSizePixel = 0
 frame.Visible = true
+frame.Parent = gui -- Parent to gui
 
 -- Ascend Speed Text Box (Label + Input)
 local speedLabel = Instance.new("TextLabel", frame)
@@ -178,7 +181,6 @@ RunService.Stepped:Connect(function()
             local _, currentYaw, _ = humanoidRootPart.CFrame:ToOrientation()
             local currentYawCFrame = CFrame.new(currentPos) * CFrame.Angles(0, currentYaw, 0)
 
-            -- Apply a -90 degree pitch rotation to face upwards relative to their current yaw
             humanoidRootPart.CFrame = currentYawCFrame * CFrame.Angles(math.rad(-90), 0, 0)
         end
     end
